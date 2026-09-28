@@ -6,3 +6,4 @@
 - `Sources/TextReplacer.swift` holds the replace/copy logic (AX focused element → editable check → ⌘A/⌘C/⌘V via CGEvent, clipboard snapshot/restore).
 - Signing: Apple Development, team N3JN8G9YWK. Keep signing stable, otherwise the Accessibility grant is invalidated on rebuild.
 - Installed copy lives at `/Applications/Fanti.app`.
+- Repo: https://github.com/jamie950315/fanti (public). Releases attach `Fanti.zip` made with `ditto -c -k --keepParent` from the Release build; the app is not notarized (no Developer ID).

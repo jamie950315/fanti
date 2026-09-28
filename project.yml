@@ -17,6 +17,8 @@ targets:
       - path: Vendor/opencc/dict
         type: folder
         buildPhase: resources
+      - path: THIRD_PARTY_NOTICES.txt
+        buildPhase: resources
     dependencies:
       - package: KeyboardShortcuts
     settings:

@@ -19,6 +19,17 @@ When replacing inside a text field the app pastes through the clipboard and rest
 The menu bar icon (a tile split into 简 and 繁) briefly shows a checkmark (replaced), a copy symbol (copied) or an equals sign (already Traditional).
 The app UI is in Traditional Chinese (Taiwan). The menu also has 轉換剪貼簿內容 (convert clipboard), 登入時啟動 (launch at login), and 設定⋯ (shortcut recorder).
 
+## Install
+
+Download `Fanti.zip` from the [latest release](https://github.com/jamie950315/fanti/releases/latest), unzip it, and move `Fanti.app` to `/Applications`.
+
+The release is signed with an Apple Development certificate but not notarized, so the first launch is blocked by Gatekeeper.
+Allow it in System Settings → Privacy & Security → Open Anyway, or run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Fanti.app
+```
+
 ## Requirements
 
 - macOS 14+
@@ -35,6 +46,6 @@ cp -R build/Build/Products/Release/Fanti.app /Applications/
 
 Requires Xcode, CMake, Ninja and XcodeGen (`brew install cmake ninja xcodegen`).
 
-## License notes
+## License
 
-OpenCC and its dictionaries are Apache-2.0. KeyboardShortcuts is MIT.
+MIT, see [LICENSE](LICENSE). Bundled third-party software (OpenCC and its dictionaries under Apache-2.0, marisa-trie, darts-clone, RapidJSON, KeyboardShortcuts) is listed in [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt), which also ships inside the app bundle.
