@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         _ = Converter.shared  // Load dictionaries up front so the first shortcut press is fast.
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        setIcon("繁")
+        statusItem.button?.image = MenuBarIcon.image
 
         let menu = NSMenu()
         menu.delegate = self
@@ -73,9 +73,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         defer { isRunning = false }
 
         switch await replacer.run() {
-        case .replaced: flash("✓")
-        case .copied: flash("⧉")
-        case .unchanged: flash("＝")
+        case .replaced: flash("checkmark")
+        case .copied: flash("doc.on.doc")
+        case .unchanged: flash("equal")
         case .nothingToConvert, .secureField: NSSound.beep()
         case .notTrusted: promptForAccessibility()
         }
@@ -94,7 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let text = pasteboard.string(forType: .string), !text.isEmpty else { NSSound.beep(); return }
         pasteboard.clearContents()
         pasteboard.setString(Converter.shared.convert(text), forType: .string)
-        flash("⧉")
+        flash("doc.on.doc")
     }
 
     @objc private func openAccessibilitySettings() {
@@ -134,15 +134,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         AXIsProcessTrustedWithOptions(options)
     }
 
-    private func setIcon(_ title: String) {
-        statusItem.button?.title = title
-    }
-
-    private func flash(_ symbol: String) {
-        setIcon(symbol)
+    private func flash(_ symbolName: String) {
+        statusItem.button?.image = MenuBarIcon.feedback(symbolName)
         Task {
             try? await Task.sleep(for: .milliseconds(800))
-            setIcon("繁")
+            statusItem.button?.image = MenuBarIcon.image
         }
     }
 }

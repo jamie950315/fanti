@@ -16,7 +16,7 @@ Press the shortcut (default **⌃⌥T**, changeable in Settings):
 | Password field / nothing selected | Beep, nothing changes |
 
 When replacing inside a text field the app pastes through the clipboard and restores the previous clipboard contents afterwards.
-The menu bar icon briefly shows ✓ (replaced), ⧉ (copied) or ＝ (already Traditional).
+The menu bar icon (a tile split into 简 and 繁) briefly shows a checkmark (replaced), a copy symbol (copied) or an equals sign (already Traditional).
 The app UI is in Traditional Chinese (Taiwan). The menu also has 轉換剪貼簿內容 (convert clipboard), 登入時啟動 (launch at login), and 設定⋯ (shortcut recorder).
 
 ## Requirements
