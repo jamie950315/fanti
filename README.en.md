@@ -1,0 +1,53 @@
+# Fanti
+
+[繁體中文](README.md) | English
+
+A macOS menu bar app that converts Simplified Chinese to Traditional Chinese (Taiwan) with a global shortcut.
+Conversion uses [OpenCC](https://github.com/BYVoid/OpenCC) 1.4.2 with the `s2twp` config
+(Taiwan standard characters plus Taiwan phrases, e.g. 软件 → 軟體, 内存 → 記憶體, 鼠标 → 滑鼠).
+
+## Behavior
+
+Press the shortcut (default **⌃⌥T**, changeable in Settings):
+
+| Where the focus is | Result |
+| --- | --- |
+| Text field with a selection | The selection is replaced with the converted text |
+| Text field without a selection | The whole field is converted in place |
+| Selected text in non-editable content (web page, PDF, label…) | Converted text is copied to the clipboard |
+| Password field / nothing selected | Beep, nothing changes |
+
+When replacing inside a text field the app pastes through the clipboard and restores the previous clipboard contents afterwards.
+The menu bar icon (a tile split into 简 and 繁) briefly shows a checkmark (replaced), a copy symbol (copied) or an equals sign (already Traditional).
+The app UI is in Traditional Chinese (Taiwan). The menu also has 轉換剪貼簿內容 (convert clipboard), 登入時啟動 (launch at login), and 設定⋯ (shortcut recorder).
+
+## Install
+
+Download `Fanti.zip` from the [latest release](https://github.com/jamie950315/fanti/releases/latest), unzip it, and move `Fanti.app` to `/Applications`.
+
+The release is signed with an Apple Development certificate but not notarized, so the first launch is blocked by Gatekeeper.
+Allow it in System Settings → Privacy & Security → Open Anyway, or run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Fanti.app
+```
+
+## Requirements
+
+- macOS 14+
+- Accessibility permission (System Settings → Privacy & Security → Accessibility → Fanti). It is needed to read the focused element and to send ⌘A/⌘C/⌘V.
+
+## Build
+
+```bash
+./scripts/build-opencc.sh   # builds static universal OpenCC + dictionaries into Vendor/opencc
+xcodegen generate
+xcodebuild -project Fanti.xcodeproj -scheme Fanti -configuration Release -derivedDataPath build build
+cp -R build/Build/Products/Release/Fanti.app /Applications/
+```
+
+Requires Xcode, CMake, Ninja and XcodeGen (`brew install cmake ninja xcodegen`).
+
+## License
+
+MIT, see [LICENSE](LICENSE). Bundled third-party software (OpenCC and its dictionaries under Apache-2.0, marisa-trie, darts-clone, RapidJSON, KeyboardShortcuts) is listed in [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt), which also ships inside the app bundle.
