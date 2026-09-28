@@ -1,4 +1,4 @@
-# TWConvert
+# Fanti
 
 A macOS menu bar app that converts Simplified Chinese to Traditional Chinese (Taiwan) with a global shortcut.
 Conversion uses [OpenCC](https://github.com/BYVoid/OpenCC) 1.4.2 with the `s2twp` config
@@ -22,15 +22,15 @@ The menu also has **Convert Clipboard**, **Launch at Login**, and **Settings…*
 ## Requirements
 
 - macOS 14+
-- Accessibility permission (System Settings → Privacy & Security → Accessibility → TWConvert). It is needed to read the focused element and to send ⌘A/⌘C/⌘V.
+- Accessibility permission (System Settings → Privacy & Security → Accessibility → Fanti). It is needed to read the focused element and to send ⌘A/⌘C/⌘V.
 
 ## Build
 
 ```bash
 ./scripts/build-opencc.sh   # builds static universal OpenCC + dictionaries into Vendor/opencc
 xcodegen generate
-xcodebuild -project TWConvert.xcodeproj -scheme TWConvert -configuration Release -derivedDataPath build build
-cp -R build/Build/Products/Release/TWConvert.app /Applications/
+xcodebuild -project Fanti.xcodeproj -scheme Fanti -configuration Release -derivedDataPath build build
+cp -R build/Build/Products/Release/Fanti.app /Applications/
 ```
 
 Requires Xcode, CMake, Ninja and XcodeGen (`brew install cmake ninja xcodegen`).

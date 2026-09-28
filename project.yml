@@ -1,4 +1,4 @@
-name: TWConvert
+name: Fanti
 options:
   bundleIdPrefix: dev.jamie
   deploymentTarget:
@@ -8,7 +8,7 @@ packages:
     url: https://github.com/sindresorhus/KeyboardShortcuts
     from: 3.1.0
 targets:
-  TWConvert:
+  Fanti:
     type: application
     platform: macOS
     sources:
@@ -20,17 +20,17 @@ targets:
       - package: KeyboardShortcuts
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.jamie.TWConvert
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jamie.Fanti
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
-        SWIFT_OBJC_BRIDGING_HEADER: Sources/TWConvert-Bridging-Header.h
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/Fanti-Bridging-Header.h
         HEADER_SEARCH_PATHS: $(SRCROOT)/Vendor/opencc/include
         LIBRARY_SEARCH_PATHS: $(SRCROOT)/Vendor/opencc/lib
         OTHER_LDFLAGS: -lopencc -lmarisa -lc++
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_LSUIElement: YES
-        INFOPLIST_KEY_CFBundleDisplayName: TWConvert
+        INFOPLIST_KEY_CFBundleDisplayName: Fanti
         INFOPLIST_KEY_NSHumanReadableCopyright: "OpenCC dictionaries © OpenCC contributors, Apache-2.0"
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Automatic
