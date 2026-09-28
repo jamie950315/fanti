@@ -1,5 +1,7 @@
 # Fanti
 
+English | [繁體中文](README.zh-TW.md)
+
 A macOS menu bar app that converts Simplified Chinese to Traditional Chinese (Taiwan) with a global shortcut.
 Conversion uses [OpenCC](https://github.com/BYVoid/OpenCC) 1.4.2 with the `s2twp` config
 (Taiwan standard characters plus Taiwan phrases, e.g. 软件 → 軟體, 内存 → 記憶體, 鼠标 → 滑鼠).
