@@ -1,0 +1,1 @@
+#include <opencc/opencc.h>

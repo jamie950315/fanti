@@ -1,0 +1,6 @@
+.build-opencc/
+Vendor/
+build/
+DerivedData/
+*.xcodeproj/
+.DS_Store
