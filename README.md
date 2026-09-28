@@ -17,7 +17,7 @@ Press the shortcut (default **⌃⌥T**, changeable in Settings):
 
 When replacing inside a text field the app pastes through the clipboard and restores the previous clipboard contents afterwards.
 The menu bar icon briefly shows ✓ (replaced), ⧉ (copied) or ＝ (already Traditional).
-The menu also has **Convert Clipboard**, **Launch at Login**, and **Settings…** (shortcut recorder).
+The app UI is in Traditional Chinese (Taiwan). The menu also has 轉換剪貼簿內容 (convert clipboard), 登入時啟動 (launch at login), and 設定⋯ (shortcut recorder).
 
 ## Requirements
 

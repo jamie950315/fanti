@@ -1,6 +1,7 @@
 name: Fanti
 options:
   bundleIdPrefix: dev.jamie
+  developmentLanguage: zh-Hant
   deploymentTarget:
     macOS: "14.0"
 packages:

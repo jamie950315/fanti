@@ -23,9 +23,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var isRunning = false
     private var settingsWindow: NSWindow?
 
-    private let convertItem = NSMenuItem(title: "Convert Selection", action: #selector(convertFromMenu), keyEquivalent: "")
+    private let convertItem = NSMenuItem(title: "轉換選取文字", action: #selector(convertFromMenu), keyEquivalent: "")
     private let accessibilityItem = NSMenuItem(title: "", action: #selector(openAccessibilitySettings), keyEquivalent: "")
-    private let loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+    private let loginItem = NSMenuItem(title: "登入時啟動", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         _ = Converter.shared  // Load dictionaries up front so the first shortcut press is fast.
@@ -36,13 +36,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
         menu.addItem(convertItem)
-        menu.addItem(NSMenuItem(title: "Convert Clipboard", action: #selector(convertClipboard), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "轉換剪貼簿內容", action: #selector(convertClipboard), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(accessibilityItem)
-        menu.addItem(NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "設定⋯", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(loginItem)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit Fanti", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "結束 Fanti", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         for item in menu.items where item.action != #selector(NSApplication.terminate(_:)) { item.target = self }
         statusItem.menu = menu
 
@@ -55,13 +55,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         let trusted = AXIsProcessTrusted()
-        accessibilityItem.title = trusted ? "Accessibility: Granted" : "Grant Accessibility Permission…"
+        accessibilityItem.title = trusted ? "輔助使用權限：已授權" : "授予輔助使用權限⋯"
         accessibilityItem.state = trusted ? .on : .off
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         if let shortcut = KeyboardShortcuts.getShortcut(for: .convert) {
-            convertItem.title = "Convert Selection (\(shortcut.description))"
+            convertItem.title = "轉換選取文字（\(shortcut.description)）"
         } else {
-            convertItem.title = "Convert Selection"
+            convertItem.title = "轉換選取文字"
         }
     }
 
@@ -117,7 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func openSettings() {
         if settingsWindow == nil {
             let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
-            window.title = "Fanti Settings"
+            window.title = "Fanti 設定"
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             window.center()
@@ -150,8 +150,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 struct SettingsView: View {
     var body: some View {
         Form {
-            KeyboardShortcuts.Recorder("Convert shortcut:", name: .convert)
-            Text("Converts Simplified Chinese to Traditional Chinese (Taiwan) with OpenCC s2twp.\nIn a text field: replaces the selection, or the whole field when nothing is selected.\nElsewhere: copies the converted selection to the clipboard.")
+            KeyboardShortcuts.Recorder("轉換快速鍵：", name: .convert)
+            Text("使用 OpenCC s2twp 將簡體中文轉換為臺灣正體中文（含臺灣慣用詞）。\n在輸入框中：取代選取的文字；未選取時轉換整個輸入框。\n在其他地方：將轉換後的選取文字複製到剪貼簿。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
