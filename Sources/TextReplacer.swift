@@ -22,7 +22,6 @@ final class TextReplacer {
 
     func run() async -> Outcome {
         guard AXIsProcessTrusted() else { return .notTrusted }
-        await waitForModifierRelease()
         guard let app = NSWorkspace.shared.frontmostApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
             return .nothingToConvert
@@ -66,9 +65,8 @@ final class TextReplacer {
             source = await copySelection() ?? ""
         }
         if source.isEmpty {
-            // Nothing selected: take the whole field.
+            // Nothing selected: take the whole field. The target app handles ⌘A before the ⌘C that follows.
             postKey(kVK_ANSI_A, flags: .maskCommand)
-            try? await Task.sleep(for: .milliseconds(60))
             source = await copySelection() ?? ""
         }
         guard !source.isEmpty else { return .nothingToConvert }
@@ -133,16 +131,6 @@ final class TextReplacer {
     }
 
     // MARK: - Keyboard / pasteboard helpers
-
-    /// The shortcut fires on key-up, usually while its modifiers are still held. Chromium-based apps
-    /// read the live modifier state, so a synthetic ⌘A sent then arrives as e.g. ⌃⌥⌘A and does nothing.
-    private func waitForModifierRelease() async {
-        let modifiers: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
-        for _ in 0..<200 {
-            if CGEventSource.flagsState(.hidSystemState).intersection(modifiers).isEmpty { return }
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-    }
 
     /// Sends ⌘C and returns the copied text, or nil if the pasteboard did not change (nothing selected).
     private func copySelection() async -> String? {
