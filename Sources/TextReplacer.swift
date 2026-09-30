@@ -40,33 +40,31 @@ final class TextReplacer {
         let axSelection = focused.flatMap { stringAttribute($0, kAXSelectedTextAttribute) }
 
         if editable {
-            let selectionIsEmpty = focused.map(hasEmptySelection) ?? false
-            return await replaceInEditable(axSelection: axSelection, selectionIsEmpty: selectionIsEmpty)
+            return await replaceInEditable(axSelection: axSelection)
         }
         return await copyConvertedSelection(axSelection: axSelection)
     }
 
     // MARK: - Modes
 
-    private func replaceInEditable(axSelection: String?, selectionIsEmpty: Bool) async -> Outcome {
+    private func replaceInEditable(axSelection: String?) async -> Outcome {
         let saved = PasteboardSnapshot(pasteboard)
-        let outcome = await convertEditableContent(axSelection: axSelection, selectionIsEmpty: selectionIsEmpty)
+        let outcome = await convertEditableContent(axSelection: axSelection)
         // Everything on the pasteboard since the snapshot was written by us; put the user's clipboard back.
         saved.expectedChangeCount = pasteboard.changeCount
         await saved.restore(to: pasteboard)
         return outcome
     }
 
-    private func convertEditableContent(axSelection: String?, selectionIsEmpty: Bool) async -> Outcome {
+    private func convertEditableContent(axSelection: String?) async -> Outcome {
         var source = axSelection ?? ""
-        if source.isEmpty && !selectionIsEmpty {
-            // Accessibility could not tell us the selection; probe with ⌘C. When nothing is selected
-            // this waits for its full timeout, so it is skipped whenever AX reports an empty selection.
+        if source.isEmpty {
             source = await copySelection() ?? ""
         }
         if source.isEmpty {
-            // Nothing selected: take the whole field. The target app handles ⌘A before the ⌘C that follows.
+            // Nothing selected: take the whole field.
             postKey(kVK_ANSI_A, flags: .maskCommand)
+            try? await Task.sleep(for: .milliseconds(60))
             source = await copySelection() ?? ""
         }
         guard !source.isEmpty else { return .nothingToConvert }
@@ -110,14 +108,6 @@ final class TextReplacer {
         var settable = DarwinBoolean(false)
         let err = AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable)
         return err == .success && settable.boolValue
-    }
-
-    /// True when the element reports a zero-length selected text range, i.e. only a caret.
-    private func hasEmptySelection(_ element: AXUIElement) -> Bool {
-        guard let value: AXValue = copyAttribute(element, kAXSelectedTextRangeAttribute),
-              AXValueGetType(value) == .cfRange else { return false }
-        var range = CFRange()
-        return AXValueGetValue(value, .cfRange, &range) && range.length == 0
     }
 
     private func copyAttribute<T>(_ element: AXUIElement, _ attribute: String) -> T? {
