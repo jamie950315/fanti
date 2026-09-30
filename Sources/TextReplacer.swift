@@ -22,6 +22,7 @@ final class TextReplacer {
 
     func run() async -> Outcome {
         guard AXIsProcessTrusted() else { return .notTrusted }
+        await waitForModifierKeysUp()
         guard let app = NSWorkspace.shared.frontmostApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
             return .nothingToConvert
@@ -40,25 +41,28 @@ final class TextReplacer {
         let axSelection = focused.flatMap { stringAttribute($0, kAXSelectedTextAttribute) }
 
         if editable {
-            return await replaceInEditable(axSelection: axSelection)
+            let caretOnly = focused.map(hasEmptySelection) ?? false
+            return await replaceInEditable(axSelection: axSelection, selectionIsEmpty: caretOnly)
         }
         return await copyConvertedSelection(axSelection: axSelection)
     }
 
     // MARK: - Modes
 
-    private func replaceInEditable(axSelection: String?) async -> Outcome {
+    private func replaceInEditable(axSelection: String?, selectionIsEmpty: Bool) async -> Outcome {
         let saved = PasteboardSnapshot(pasteboard)
-        let outcome = await convertEditableContent(axSelection: axSelection)
+        let outcome = await convertEditableContent(axSelection: axSelection, selectionIsEmpty: selectionIsEmpty)
         // Everything on the pasteboard since the snapshot was written by us; put the user's clipboard back.
         saved.expectedChangeCount = pasteboard.changeCount
         await saved.restore(to: pasteboard)
         return outcome
     }
 
-    private func convertEditableContent(axSelection: String?) async -> Outcome {
+    private func convertEditableContent(axSelection: String?, selectionIsEmpty: Bool) async -> Outcome {
         var source = axSelection ?? ""
-        if source.isEmpty {
+        if source.isEmpty && !selectionIsEmpty {
+            // AX could not tell us the selection, so probe with ⌘C. With nothing selected the probe
+            // waits for its full timeout, which is why a caret-only selection skips it.
             source = await copySelection() ?? ""
         }
         if source.isEmpty {
@@ -108,6 +112,26 @@ final class TextReplacer {
         var settable = DarwinBoolean(false)
         let err = AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable)
         return err == .success && settable.boolValue
+    }
+
+    /// True when the element reports a zero-length selected text range, i.e. only a caret.
+    private func hasEmptySelection(_ element: AXUIElement) -> Bool {
+        guard let value: AXValue = copyAttribute(element, kAXSelectedTextRangeAttribute),
+              AXValueGetType(value) == .cfRange else { return false }
+        var range = CFRange()
+        return AXValueGetValue(value, .cfRange, &range) && range.length == 0
+    }
+
+    /// The shortcut fires on key-up, usually while its modifiers are still physically held, and keystrokes
+    /// sent then can arrive with those modifiers added. Our own synthetic ⌘ events leave ⌘ reported as down
+    /// until the next physical key event (normally the shortcut itself), hence the 500 ms cap.
+    private func waitForModifierKeysUp() async {
+        let keys = [kVK_Command, kVK_RightCommand, kVK_Control, kVK_RightControl,
+                    kVK_Option, kVK_RightOption, kVK_Shift, kVK_RightShift]
+        for _ in 0..<100 {
+            if !keys.contains(where: { CGEventSource.keyState(.hidSystemState, key: CGKeyCode($0)) }) { return }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
     }
 
     private func copyAttribute<T>(_ element: AXUIElement, _ attribute: String) -> T? {
