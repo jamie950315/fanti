@@ -23,6 +23,9 @@ final class TextReplacer {
     /// The only switch they react to is AXEnhancedUserInterface, which puts the app in screen-reader
     /// mode, so these are handled without accessibility information instead.
     private static let opaqueEditorBundleIDs: Set<String> = ["com.openai.codex"]
+    /// How long to wait for ⌘C in those apps before concluding nothing is selected. Codex answers a copy
+    /// in 20–55 ms and not at all without a selection, so the default 500 ms would be spent on every press.
+    private static let opaqueProbeTimeout: Duration = .milliseconds(150)
     /// Apps whose accessibility tree was already requested through AXManualAccessibility.
     private var manualAccessibilityPIDs: Set<pid_t> = []
 
@@ -37,7 +40,7 @@ final class TextReplacer {
         let focused = await focusedElement(frontmost: app)
         if focused == nil, let bundleID = app.bundleIdentifier, Self.opaqueEditorBundleIDs.contains(bundleID) {
             // Nothing can be read from this app, so treat the focus as a text field and let ⌘C find the selection.
-            return await replaceInEditable(axSelection: nil, selectionIsEmpty: false)
+            return await replaceInEditable(axSelection: nil, selectionIsEmpty: false, probeTimeout: Self.opaqueProbeTimeout)
         }
         if let focused, stringAttribute(focused, kAXRoleAttribute) == (kAXTextFieldRole as String),
            stringAttribute(focused, kAXSubroleAttribute) == (kAXSecureTextFieldSubrole as String) {
@@ -55,21 +58,24 @@ final class TextReplacer {
 
     // MARK: - Modes
 
-    private func replaceInEditable(axSelection: String?, selectionIsEmpty: Bool) async -> Outcome {
+    private func replaceInEditable(axSelection: String?, selectionIsEmpty: Bool,
+                                   probeTimeout: Duration = .milliseconds(500)) async -> Outcome {
         let saved = PasteboardSnapshot(pasteboard)
-        let outcome = await convertEditableContent(axSelection: axSelection, selectionIsEmpty: selectionIsEmpty)
+        let outcome = await convertEditableContent(axSelection: axSelection, selectionIsEmpty: selectionIsEmpty,
+                                                   probeTimeout: probeTimeout)
         // Everything on the pasteboard since the snapshot was written by us; put the user's clipboard back.
         saved.expectedChangeCount = pasteboard.changeCount
         await saved.restore(to: pasteboard)
         return outcome
     }
 
-    private func convertEditableContent(axSelection: String?, selectionIsEmpty: Bool) async -> Outcome {
+    private func convertEditableContent(axSelection: String?, selectionIsEmpty: Bool,
+                                        probeTimeout: Duration) async -> Outcome {
         var source = axSelection ?? ""
         if source.isEmpty && !selectionIsEmpty {
             // AX could not tell us the selection, so probe with ⌘C. With nothing selected the probe
             // waits for its full timeout, which is why a caret-only selection skips it.
-            source = await copySelection() ?? ""
+            source = await copySelection(timeout: probeTimeout) ?? ""
         }
         if source.isEmpty {
             // Nothing selected: take the whole field.
@@ -172,10 +178,11 @@ final class TextReplacer {
     // MARK: - Keyboard / pasteboard helpers
 
     /// Sends ⌘C and returns the copied text, or nil if the pasteboard did not change (nothing selected).
-    private func copySelection() async -> String? {
+    private func copySelection(timeout: Duration = .milliseconds(500)) async -> String? {
         let before = pasteboard.changeCount
         postKey(kVK_ANSI_C, flags: .maskCommand)
-        for _ in 0..<50 {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(10))
             if pasteboard.changeCount != before {
                 return pasteboard.string(forType: .string)
