@@ -19,6 +19,8 @@ final class TextReplacer {
     }
 
     private let pasteboard = NSPasteboard.general
+    /// Apps whose accessibility tree was already requested through AXManualAccessibility.
+    private var manualAccessibilityPIDs: Set<pid_t> = []
 
     func run() async -> Outcome {
         guard AXIsProcessTrusted() else { return .notTrusted }
@@ -28,11 +30,7 @@ final class TextReplacer {
             return .nothingToConvert
         }
 
-        let appElement = AXUIElementCreateApplication(app.processIdentifier)
-        // Electron/Chromium apps only expose their accessibility tree after an AX client asks for it.
-        AXUIElementSetAttributeValue(appElement, "AXManualAccessibility" as CFString, kCFBooleanTrue)
-
-        let focused: AXUIElement? = copyAttribute(appElement, kAXFocusedUIElementAttribute)
+        let focused = await focusedElement(frontmost: app)
         if let focused, stringAttribute(focused, kAXRoleAttribute) == (kAXTextFieldRole as String),
            stringAttribute(focused, kAXSubroleAttribute) == (kAXSecureTextFieldSubrole as String) {
             return .secureField
@@ -100,6 +98,37 @@ final class TextReplacer {
     }
 
     // MARK: - Accessibility helpers
+
+    /// The element with keyboard focus. Asked system-wide rather than of the frontmost app, because
+    /// launcher panels (Raycast, Spotlight) take key focus without becoming the frontmost app.
+    private func focusedElement(frontmost app: NSRunningApplication) async -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        // Electron/Chromium apps only expose their accessibility tree after an AX client asks for it.
+        let justEnabled = enableWebAccessibility(appElement, pid: app.processIdentifier)
+
+        if let focused: AXUIElement = copyAttribute(systemWide, kAXFocusedUIElementAttribute) { return focused }
+        guard justEnabled else { return nil }
+        // The tree takes a second or two to build after being switched on.
+        for _ in 0..<60 {
+            try? await Task.sleep(for: .milliseconds(50))
+            if let focused: AXUIElement = copyAttribute(systemWide, kAXFocusedUIElementAttribute) { return focused }
+        }
+        return nil
+    }
+
+    /// Switches on the accessibility tree of a Chromium-based app. Returns true when this call turned it on.
+    private func enableWebAccessibility(_ appElement: AXUIElement, pid: pid_t) -> Bool {
+        // Electron's side-effect-free switch.
+        if AXUIElementSetAttributeValue(appElement, "AXManualAccessibility" as CFString, kCFBooleanTrue) == .success {
+            return manualAccessibilityPIDs.insert(pid).inserted
+        }
+        // Chromium apps that are not Electron (e.g. Codex) only react to the switch assistive apps use.
+        let enhanced = "AXEnhancedUserInterface" as CFString
+        guard let isOn: Bool = copyAttribute(appElement, enhanced as String), !isOn else { return false }
+        AXUIElementSetAttributeValue(appElement, enhanced, kCFBooleanTrue)
+        return true
+    }
 
     private func isEditable(_ element: AXUIElement) -> Bool {
         // WebKit and Chromium mark inputs and contenteditable regions with an editable ancestor.
