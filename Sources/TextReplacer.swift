@@ -19,6 +19,10 @@ final class TextReplacer {
     }
 
     private let pasteboard = NSPasteboard.general
+    /// Chromium apps that are not Electron ignore AXManualAccessibility and expose no focused element.
+    /// The only switch they react to is AXEnhancedUserInterface, which puts the app in screen-reader
+    /// mode, so these are handled without accessibility information instead.
+    private static let opaqueEditorBundleIDs: Set<String> = ["com.openai.codex"]
     /// Apps whose accessibility tree was already requested through AXManualAccessibility.
     private var manualAccessibilityPIDs: Set<pid_t> = []
 
@@ -31,6 +35,10 @@ final class TextReplacer {
         }
 
         let focused = await focusedElement(frontmost: app)
+        if focused == nil, let bundleID = app.bundleIdentifier, Self.opaqueEditorBundleIDs.contains(bundleID) {
+            // Nothing can be read from this app, so treat the focus as a text field and let ⌘C find the selection.
+            return await replaceInEditable(axSelection: nil, selectionIsEmpty: false)
+        }
         if let focused, stringAttribute(focused, kAXRoleAttribute) == (kAXTextFieldRole as String),
            stringAttribute(focused, kAXSubroleAttribute) == (kAXSecureTextFieldSubrole as String) {
             return .secureField
@@ -104,8 +112,9 @@ final class TextReplacer {
     private func focusedElement(frontmost app: NSRunningApplication) async -> AXUIElement? {
         let systemWide = AXUIElementCreateSystemWide()
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
-        // Electron/Chromium apps only expose their accessibility tree after an AX client asks for it.
-        let justEnabled = enableWebAccessibility(appElement, pid: app.processIdentifier)
+        // Electron apps only expose their accessibility tree after an AX client asks for it.
+        let justEnabled = AXUIElementSetAttributeValue(appElement, "AXManualAccessibility" as CFString, kCFBooleanTrue) == .success
+            && manualAccessibilityPIDs.insert(app.processIdentifier).inserted
 
         if let focused: AXUIElement = copyAttribute(systemWide, kAXFocusedUIElementAttribute) { return focused }
         guard justEnabled else { return nil }
@@ -115,19 +124,6 @@ final class TextReplacer {
             if let focused: AXUIElement = copyAttribute(systemWide, kAXFocusedUIElementAttribute) { return focused }
         }
         return nil
-    }
-
-    /// Switches on the accessibility tree of a Chromium-based app. Returns true when this call turned it on.
-    private func enableWebAccessibility(_ appElement: AXUIElement, pid: pid_t) -> Bool {
-        // Electron's side-effect-free switch.
-        if AXUIElementSetAttributeValue(appElement, "AXManualAccessibility" as CFString, kCFBooleanTrue) == .success {
-            return manualAccessibilityPIDs.insert(pid).inserted
-        }
-        // Chromium apps that are not Electron (e.g. Codex) only react to the switch assistive apps use.
-        let enhanced = "AXEnhancedUserInterface" as CFString
-        guard let isOn: Bool = copyAttribute(appElement, enhanced as String), !isOn else { return false }
-        AXUIElementSetAttributeValue(appElement, enhanced, kCFBooleanTrue)
-        return true
     }
 
     private func isEditable(_ element: AXUIElement) -> Bool {
